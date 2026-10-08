@@ -89,11 +89,19 @@ public extension AppSession {
         let (element, handle) = try live(ref)
         guard !element.isSecure else { throw AutomationError.secureField(element.described) }
         guard element.isEnabled else { throw AutomationError.disabled(element.described) }
+
+        let isToggle = ["AXCheckBox", "AXSwitch"].contains(element.role) || element.subrole == "AXSwitch"
+
+        // An AppKit checkbox's value is NOT settable — measured on the
+        // fixture, `AXUIElementIsAttributeSettable` said no. Its state is
+        // changed the way a person changes it: by pressing it, and only when
+        // it is not already where it was asked to be.
+        if isToggle, !AXRead.isSettable(kAXValueAttribute, of: handle) {
+            return try toggle(element, handle: handle, to: value)
+        }
         guard AXRead.isSettable(kAXValueAttribute, of: handle) else {
             throw AutomationError.notSettable(element.described)
         }
-
-        let isToggle = ["AXCheckBox", "AXSwitch"].contains(element.role) || element.subrole == "AXSwitch"
         let current = AXRead.attribute(kAXValueAttribute, of: handle).value as AnyObject?
         guard let typed = ValueCoercion.value(from: value, current: current, isToggle: isToggle) else {
             throw AutomationError.notSettable("\(element.described) does not take “\(value)” — it holds "
@@ -111,6 +119,38 @@ public extension AppSession {
         let after = currentValue(handle)
         guard took else { throw AutomationError.notApplied(expected: value, actual: after) }
         return ActionResult(element: element, action: "set", verified: true, valueAfter: after)
+    }
+
+    /// Sets a checkbox or switch by pressing it, if it needs pressing.
+    private func toggle(_ element: Element, handle: AXUIElement, to value: String) throws -> ActionResult {
+        guard let wanted = ValueCoercion.flag(value) else {
+            throw AutomationError.notSettable("\(element.described) does not take “\(value)” — it holds on or off")
+        }
+        let before = currentValue(handle).flatMap(ValueCoercion.flag)
+        if before == wanted {
+            return ActionResult(element: element, action: "set", verified: true, valueAfter: currentValue(handle),
+                                note: "already \(wanted ? "on" : "off") — not pressed")
+        }
+        guard let method = element.pressMethod else {
+            throw AutomationError.notSettable(element.described)
+        }
+        if method == .press {
+            let status = AXUIElementPerformAction(handle, kAXPressAction as CFString)
+            guard status == .success else { throw AXFailure.error(status, doing: "pressing \(element.described)") }
+        } else {
+            try focusElement(handle, described: element.described)
+            Keystrokes.post([.key(Keystrokes.Key.space)], to: app.pid)
+        }
+
+        // A web checkbox reports no value at all; that is unverified, not
+        // refused. A native one that reads back the old state is refused.
+        guard before != nil else {
+            return ActionResult(element: element, action: "set", method: method, valueAfter: currentValue(handle))
+        }
+        let took = Settle.until { currentValue(handle).flatMap(ValueCoercion.flag) == wanted }
+        let after = currentValue(handle)
+        guard took else { throw AutomationError.notApplied(expected: value, actual: after) }
+        return ActionResult(element: element, action: "set", method: method, verified: true, valueAfter: after)
     }
 
     // MARK: - Type
