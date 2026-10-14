@@ -31,7 +31,7 @@ click.
 
 ## What it does
 
-| | |
+| Call | What it does |
 |---|---|
 | `Automation.apps()` | running apps |
 | `Automation.app(matching:)` | one app, by name, bundle id or pid |
