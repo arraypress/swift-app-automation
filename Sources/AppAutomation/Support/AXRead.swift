@@ -37,6 +37,7 @@ enum AXRead {
         kAXSizeAttribute,
         kAXEnabledAttribute,
         kAXFocusedAttribute,
+        kAXSelectedAttribute,
         kAXChildrenAttribute,
     ]
 

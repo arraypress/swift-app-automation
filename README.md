@@ -45,6 +45,7 @@ click.
 | `AppSession.pick(_:in:)` | choose from a pop-up button |
 | `AppSession.menuItems()` / `chooseMenu(_:)` | the menu bar as paths |
 | `AppSession.focus(_:)` | bring the app forward — the one call that does |
+| `AppSession.wait(until:options:)` | read until conditions hold, steadily — touches nothing |
 
 ## Refs
 
@@ -60,6 +61,38 @@ than pressing whatever now sits there.
 
 The first number picks the top level: `0` is the menu bar, `1` and up are the
 windows. Not the app's `AXChildren`, for a reason below.
+
+## Waiting
+
+```swift
+let send = ElementQuery("Send", role: "button")
+let report = try mail.wait(until: [
+    WaitCondition(.element(send, in: .focusedWindow), .enabled),
+    WaitCondition(.window("New Message")),
+], options: WaitOptions(timeout: 30))
+if report.outcome == .satisfied { … }
+```
+
+A wait reads until every `WaitCondition` holds at the same reading —
+`exists`, `gone`, `valueEquals`, `valueContains`, `enabled`, `disabled`,
+`selected` — on an element by query or ref, or a window by title. It never
+acts.
+
+- **Steady.** A condition is met after `stable` identical readings in a row
+  (2), each at least `interval` apart. An early reading can break a run but
+  never extend it, so a burst of notifications cannot confirm a flicker.
+- **Woken early, polling anyway.** An `AXObserver` on the app's own element
+  brings the next reading forward when the app announces a change; polling
+  every `interval` carries on, because not every change is announced.
+- **Four answers, not two.** Each reading is present, absent, ambiguous
+  (several matches — never "exists") or unreadable (hidden, another Space,
+  not answering, a tree cut short). Unreadable is never "gone".
+- **A report whatever happens.** A timeout is not thrown: the
+  `WaitReport` carries each condition's last reading. A lost grant, a lock,
+  the app quitting or a password field's value end it as `.stopped`.
+
+Elements now carry `isSelected` (`AXSelected`), and `ElementQuery` takes an
+`identifier`, matched whole.
 
 ## Safe by construction
 
@@ -116,6 +149,20 @@ Notes, with six real windows on another desktop, reported zero. The window
 server still lists them off-screen, so the library asks it and throws
 `windowsOnAnotherSpace` rather than reporting an empty app.
 
+**…but off-screen is not "on another Space".** Measured on macOS 27 with one
+Space and nineteen apps: 92 of their ordinary windows were off-screen, and
+91 were on no Space at all — AppKit's own scaffolding (a screen-wide strip
+39 pt tall per closed document window, an unplaced 500×500, cursor helpers)
+and windows apps closed but kept alive, ordered out (Notes 1000×660, Mail
+420×632). Counted, every app with no window open read as "windows on
+another Space", and a wait for an app's last window to close could never
+succeed. Now a window counts only if it is off-screen AND in AppKit's
+all-Spaces window list, which ordered-out windows are not. Not measured: a
+window on a second Space — this Mac has one, and making another means
+moving somebody's windows; that such windows are in the list is AppKit's
+documented meaning of `.allSpaces`. (The Notes figure above was measured
+before this rule.)
+
 **A set value can take 30 ms to appear.** In Chrome, a read straight after a
 successful set came back `nil`; the value was there 30 ms later. Read-backs
 poll for up to half a second.
@@ -130,6 +177,14 @@ one at a time across Contacts took **2.76 s**; the same in one
 `AXUIElementCopyMultipleAttributeValues` call took **0.43 s**. A failed
 attribute in that batch arrives as an `AXValue` of type `.axError` or as
 `CFNull`, in place, and has to be recognised and dropped.
+
+**Apps do not announce everything.** One `AXObserver` registration on the
+app's own element receives notifications from everything in it — measured
+on TextEdit, a window opening (`AXCreated`, `AXWindowCreated`, about 60 ms
+after `open`) and closing (fourteen `AXUIElementDestroyed` over 25 ms) both
+arrived. But a button added to a background AppKit window sent nothing at
+all, while its value changing and its removal were announced at once. So a
+notification only ever means "look again", and waits poll as well.
 
 **There is no 20-character limit on typed text.** A 500-unit string in one
 key event arrived whole. Text rides on the event's Unicode string with
@@ -165,6 +220,11 @@ drive another's interface.
 
 `swift test` runs the rules — labels, refs, matching, press methods,
 keystroke chunking, value coercion — on hand-built values, with no app.
+
+`APPAUTOMATION_LIVE=1 swift test --filter WaitLiveTests` waits on the same
+fixture in its timeline mode, which takes no focus and is never touched: it
+stays in the background and adds, enables and removes a button on a
+schedule.
 
 `APPAUTOMATION_LIVE=1 swift test --filter LiveTests` drives
 `AutomationFixture`, a window with known controls that prints its own state

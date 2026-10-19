@@ -74,6 +74,7 @@ enum ElementBuilder {
             isEnabled: AXRead.bool(values[kAXEnabledAttribute]) ?? true,
             isFocused: AXRead.bool(values[kAXFocusedAttribute]) ?? false,
             isSecure: isSecure,
+            isSelected: AXRead.bool(values[kAXSelectedAttribute]) ?? false,
             actions: actions
         )
     }
@@ -104,6 +105,7 @@ enum ElementBuilder {
             isEnabled: element.isEnabled,
             isFocused: element.isFocused,
             isSecure: element.isSecure,
+            isSelected: element.isSelected,
             actions: element.actions
         )
     }

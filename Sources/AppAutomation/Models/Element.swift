@@ -63,6 +63,12 @@ public struct Element: Sendable, Equatable, Codable {
     /// Whether it is a password field.
     public let isSecure: Bool
 
+    /// Whether the app reports it selected: a row in a list, a tab, a cell.
+    ///
+    /// Accessibility's `AXSelected`, and only that — a checkbox that is on
+    /// says so in its ``value`` (`1`), not here.
+    public let isSelected: Bool
+
     /// What can be done to it, by Accessibility name: `AXPress`, `AXShowMenu`.
     ///
     /// **Believe this list over the return code of an action.** A button in
@@ -87,6 +93,7 @@ public struct Element: Sendable, Equatable, Codable {
         isEnabled: Bool = true,
         isFocused: Bool = false,
         isSecure: Bool = false,
+        isSelected: Bool = false,
         actions: [String] = []
     ) {
         self.ref = ref
@@ -103,6 +110,7 @@ public struct Element: Sendable, Equatable, Codable {
         self.isEnabled = isEnabled
         self.isFocused = isFocused
         self.isSecure = isSecure
+        self.isSelected = isSelected
         self.actions = actions
     }
 }

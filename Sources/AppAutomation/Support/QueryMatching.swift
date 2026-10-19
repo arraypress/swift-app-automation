@@ -38,6 +38,7 @@ public enum QueryMatching {
         if let role = query.role, !RoleNames.matches(role, role: element.role, subrole: element.subrole) {
             return false
         }
+        if let identifier = query.identifier, element.identifier != identifier { return false }
         if query.actionableOnly, !ElementRules.isActionable(element) { return false }
         return true
     }

@@ -266,6 +266,13 @@ public final class AppSession {
 
     /// A query in words, for messages: `button “Save”`.
     static func describe(_ query: ElementQuery) -> String {
+        let named = describeByName(query)
+        guard let identifier = query.identifier else { return named }
+        return query.text == nil && query.role == nil ? "id “\(identifier)”" : "\(named) with id “\(identifier)”"
+    }
+
+    /// The role and text half of ``describe(_:)``.
+    private static func describeByName(_ query: ElementQuery) -> String {
         switch (query.role, query.text) {
         case let (role?, text?): return "\(role) “\(text)”"
         case let (nil, text?): return "“\(text)”"

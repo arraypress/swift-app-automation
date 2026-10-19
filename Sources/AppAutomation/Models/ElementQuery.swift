@@ -12,6 +12,7 @@ import Foundation
 /// ```swift
 /// ElementQuery("Save", role: "button")
 /// ElementQuery("name", role: "text-field")
+/// ElementQuery(identifier: "ConversationList")
 /// ```
 public struct ElementQuery: Sendable, Equatable {
 
@@ -25,6 +26,11 @@ public struct ElementQuery: Sendable, Equatable {
     /// Whether the label must equal ``text`` rather than contain it.
     public let exact: Bool
 
+    /// A developer-assigned `AXIdentifier` to require, compared whole and
+    /// case-sensitively — it is a name in somebody's code, not a sentence.
+    /// `nil` matches any.
+    public let identifier: String?
+
     /// Whether to consider only things that can be pressed, set or typed into.
     public let actionableOnly: Bool
 
@@ -34,16 +40,19 @@ public struct ElementQuery: Sendable, Equatable {
     ///   - text: Label text; `nil` matches any.
     ///   - role: A role, either form; `nil` matches any.
     ///   - exact: Require the whole label.
+    ///   - identifier: An `AXIdentifier`, whole; `nil` matches any.
     ///   - actionableOnly: Skip what cannot be acted on.
     public init(
         _ text: String? = nil,
         role: String? = nil,
         exact: Bool = false,
+        identifier: String? = nil,
         actionableOnly: Bool = false
     ) {
         self.text = text
         self.role = role
         self.exact = exact
+        self.identifier = identifier
         self.actionableOnly = actionableOnly
     }
 }

@@ -24,7 +24,9 @@ func element(
     actions: [String] = [],
     source: LabelSource = .title,
     enabled: Bool = true,
-    secure: Bool = false
+    secure: Bool = false,
+    selected: Bool = false,
+    identifier: String? = nil
 ) -> Element {
     Element(
         ref: ElementRef(path: path, fingerprint: RefCodec.fingerprint(role: role, label: label)),
@@ -34,8 +36,10 @@ func element(
         label: label,
         labelSource: label == nil ? .none : source,
         value: value,
+        identifier: identifier,
         isEnabled: enabled,
         isSecure: secure,
+        isSelected: selected,
         actions: actions
     )
 }
